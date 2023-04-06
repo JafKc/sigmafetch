@@ -1,96 +1,165 @@
-use std::{io};
-use rand::{self, Rng};
+use std::{io::{stdin, Read}, process::Command};
 
-fn main() {
-  let selectprogram = rand::thread_rng().gen_range(1..100);
-  println!("{selectprogram}");
-  if selectprogram < 50 {
-      tempconverter()
-  } else if selectprogram > 50 {
-      loginpro()
-  }
-}
+use prettytable::{Table, row, format};
+use sysinfo::{self, System as syspro, SystemExt, CpuExt, DiskExt};
 
-
-fn tempconverter()
+pub fn main()
 {
-    let mut select = String::new();
-    let selectint : i8;
-    let result: i32;
-    let mut temperature = String::new();
-    let temperatureint: i32;
 
+    let sys = syspro::new_all();
+    let hostname = sys.host_name().unwrap() + "\n\n";
+    let osystem = "OS: ".to_owned() + &sys.name().unwrap() + " " + &sys.os_version().unwrap() + "\n";
+    let kernel = "Kernel version: ".to_owned() + &sys.kernel_version().unwrap() + "\n";
 
-    println!("Temperature converter written in Rust!");
-    println!("Convert from:");
-    println!("1- Celsius to Farenheit");
-    println!("2- Farenheit to Celsius");
+    let mut de = String::new();
+    if cfg!(target_os = "linux") {
+        de = "Desktop Enviroment: ".to_owned() + &std::env::var("XDG_CURRENT_DESKTOP").unwrap() + "\n";
 
-    io::stdin()
-        .read_line(&mut select)
-        .expect("Lel");
-
-    selectint = select.trim().parse::<i8>().unwrap();
-    
-    if selectint > 2 || selectint < 1 {
-        println!("Program crashed because of wrong input.");
-        std::process::exit(0)
+    } else if cfg!(windows) {
+        de = "Desktop Enviroment: Windows\n".to_owned();
     }
 
-    println!("Great! Now enter the temperature to convert");
+    let processes = "Processes: ".to_owned() + &sys.processes().len().to_string() + "\n";
+    let boottime = "Time since boot: ".to_owned() + &(sys.uptime() / 3600).to_string() + " hours\n";
 
-    io::stdin()
-        .read_line(&mut temperature)
-        .expect("LMAO BRO");
+
+
+   let cpun = "CPU: ".to_owned() + &sys.global_cpu_info().brand() + "\n";
+   let cpufreq = "CPU frequency: ".to_owned() + &sys.global_cpu_info().frequency().to_string() + "MHz\n";
+   let cputh = "CPU threads: ".to_owned() + &sys.cpus().len().to_string() + "\n";
+   let cpuco = "CPU cores: ".to_owned() + &sys.physical_core_count().unwrap().to_string()+ "\n";
+
+
+
+    let mut gpu = String::new();
+    if cfg!(target_os = "linux") {
+        let res = Command::new("sh")
+        .args(&["-c", "lspci | grep -I 'VGA\\|Display\\|3D'"])
+        .output()
+        .unwrap();
+
+        gpu = "GPU: ".to_owned() + &String::from_utf8(res.stdout).unwrap_or("failed at getting gpu info".to_string());
+   } else if cfg!(windows) {
+         let res = Command::new("wmic")
+         .args(["path", "win32_VideoController", "get", "name"])
+         .output()
+         .unwrap();
+        gpu = "GPU: ".to_owned() + &String::from_utf8(res.stdout).unwrap_or("failed at getting gpu info \n".to_string());
+   }
+
+
+   let mut disks = "Disks: ".to_owned();
+
+    for disk in sys.disks(){
+        disks = disks + &((disk.name().to_str().unwrap().to_string() + " " + &(disk.total_space() / 1024000000).to_string() + "GiB"));
+    }
+    disks = disks + "\n";
     
-    temperatureint = temperature.trim().parse::<i32>().unwrap();
+    
 
-    if selectint == 1
+    let memory = "Memory: ".to_owned() + &(((sys.total_memory() as f32 / 1024000000.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
+    let memoryuse = "Memory usage: ".to_owned() + &(((sys.used_memory() as f32 / 1024000000.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
+    let swap = "Swap: ".to_owned() + &(((sys.total_swap() as f32 / 1024000000.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
+    let swapuse = "Swap usage: ".to_owned() + &(((sys.used_swap() as f32 / 1024000000.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
+
+
+    let mut info = String::new();
+    info.push_str(&hostname);
+    info.push_str(&osystem);
+    info.push_str(&kernel);
+    info.push_str(&de);
+
+    info.push_str(&processes);
+    info.push_str(&boottime);
+
+    info.push_str(&cpun);
+    info.push_str(&cpufreq);
+    info.push_str(&cputh);
+    info.push_str(&cpuco);
+
+    info.push_str(&gpu);
+
+    info.push_str(&disks);
+
+    info.push_str(&memory);
+    info.push_str(&memoryuse);
+    info.push_str(&swap);
+    info.push_str(&swapuse);
+    
+    let mut table = Table::new();
+    table.add_row(row![Fcb->logo(), Fgb->info]);
+    table.set_format(*format::consts::FORMAT_CLEAN);
+
+
+    table.printstd();
+    logo();
+
+    if cfg!(windows){
+        stdin().read(&mut [0]).unwrap();
+    }
+}
+
+fn logo() -> String{
+    let windows = "
+
+                            .oodMMMM
+                   .oodMMMMMMMMMMMMM
+       ..oodMMM  MMMMMMMMMMMMMMMMMMM
+ oodMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ 
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ MMMMMMMMMMMMMM  MMMMMMMMMMMMMMMMMMM
+ `^^^^^^MMMMMMM  MMMMMMMMMMMMMMMMMMM
+       ````^^^^  ^^MMMMMMMMMMMMMMMMM
+                      ````^^^^^^MMMM
+    ";
+
+    let linuxlogo = "
+                  .88888888:.
+                88888888.88888.
+              .8888888888888888.
+              888888888888888888
+              88' _`88'_  `88888
+              88 88 88 88  88888
+              88_88_::_88_:88888
+              88:::,::,:::::8888
+              88`:::::::::'`8888
+             .88  `::::'    8:88.
+            8888            `8:888.
+          .8888'             `888888.
+         .8888:..  .::.  ...:'8888888:.
+        .8888.'     :'     `'::`88:88888
+       .8888        '         `.888:8888.
+      888:8         .           888:88888
+    .888:88        .:           888:88888:
+    8888888.       ::           88:888888
+    `.::.888.      ::          .88888888
+   .::::::.888.    ::         :::`8888'.:.
+  ::::::::::.888   '         .::::::::::::
+  ::::::::::::.8    '      .:8::::::::::::.
+ .::::::::::::::.        .:888:::::::::::::
+ :::::::::::::::88:.__..:88888:::::::::::'
+  `'.:::::::::::88888888888.88:::::::::'
+        `':::_:' -- '' -'-' `':_::::'`
+    ";
+    if cfg!(target_os = "linux")
     {
-        result = c_to_f(temperatureint)
-    } else if selectint == 2 
+        return linuxlogo.to_string();
+    } else if cfg!(windows)
     {
-        result = f_to_c(temperatureint)    
+        return windows.to_string();
     } else {
-        panic!("Something happened and the program crashed.")
+        panic!();
     }
-
-    println!("Calculation done! Result is {}, converted from {}!", result, temperatureint)
-
-}
-fn c_to_f(c: i32) -> i32 
-{   
-    c * 9 / 5 + 32
 }
 
-fn f_to_c(f: i32) -> i32
-{
-    (f - 32) * 5 / 9
-}
 
-fn loginpro()
-{
-    let mut placeholdername = String::new();
-    let mut placeholderpass = String::new();
 
-    struct Login
-    {
-        name: String,
-        password: String
-    }
-
-    println!("HELLO THIS IS PRO'S PROGRAM NICE TO HAVE YOU HERE! \n Create your account to use our program! \nStart with a name for your account:");
-
-    io::stdin()
-        .read_line(&mut placeholdername)
-        .expect("Wrong input!");
-
-    println!("Great! Now the password for your account:");
-
-    io::stdin()
-        .read_line(&mut placeholderpass)
-        .expect("Wrong input!");
-
-    let account = Login{name: placeholdername.to_uppercase(), password:placeholderpass.to_uppercase()};
-    println!("\nAccount created! Your account's name is {} and your password is {}!", account.name, account.password);
-}
