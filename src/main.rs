@@ -5,7 +5,6 @@ use sysinfo::{self, System as syspro, SystemExt, CpuExt, DiskExt};
 
 pub fn main()
 {
-
     let sys = syspro::new_all();
     let hostname = sys.host_name().unwrap() + "\n\n";
     let osystem = "OS: ".to_owned() + &sys.name().unwrap() + " " + &sys.os_version().unwrap() + "\n";
@@ -38,29 +37,36 @@ pub fn main()
         .output()
         .unwrap();
 
-        gpu = "GPU: ".to_owned() + &String::from_utf8(res.stdout).unwrap_or("failed at getting gpu info".to_string());
+        gpu = "GPU: ".to_owned() + &String::from_utf8(res.stdout).unwrap_or("failed to get gpu info".to_string());
    } else if cfg!(windows) {
          let res = Command::new("wmic")
          .args(["path", "win32_VideoController", "get", "name"])
          .output()
          .unwrap();
-        gpu = "GPU: ".to_owned() + &String::from_utf8(res.stdout).unwrap_or("failed at getting gpu info \n".to_string());
+        let gpuinfo = String::from_utf8(res.stdout).unwrap_or("\nfailed to get gpu info ".to_string());
+        let mut lines = gpuinfo.lines().collect::<Vec<_>>();
+        lines.remove(0);
+
+        let gpuinfo = lines.join("\n");
+
+        gpu = "GPU: ".to_owned() + &gpuinfo;
+        gpu = gpu + "\n"
    }
 
 
    let mut disks = "Disks: ".to_owned();
 
     for disk in sys.disks(){
-        disks = disks + &((disk.name().to_str().unwrap().to_string() + " " + &(disk.total_space() / 1024000000).to_string() + "GiB"));
+        disks = disks + &((disk.name().to_str().unwrap().to_string() + " " + &(disk.total_space() / 1073741824).to_string() + "GiB "));
     }
     disks = disks + "\n";
     
     
 
-    let memory = "Memory: ".to_owned() + &(((sys.total_memory() as f32 / 1024000000.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
-    let memoryuse = "Memory usage: ".to_owned() + &(((sys.used_memory() as f32 / 1024000000.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
-    let swap = "Swap: ".to_owned() + &(((sys.total_swap() as f32 / 1024000000.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
-    let swapuse = "Swap usage: ".to_owned() + &(((sys.used_swap() as f32 / 1024000000.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
+    let memory = "Memory: ".to_owned() + &(((sys.total_memory() as f32 / 1073741824.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
+    let memoryuse = "Memory usage: ".to_owned() + &(((sys.used_memory() as f32 / 1073741824.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
+    let swap = "Swap: ".to_owned() + &(((sys.total_swap() as f32 / 1073741824.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
+    let swapuse = "Swap usage: ".to_owned() + &(((sys.used_swap() as f32 / 1073741824.0 * 100.0).trunc()) / 100.0).to_string() + "GiB\n";
 
 
     let mut info = String::new();
@@ -80,6 +86,7 @@ pub fn main()
     info.push_str(&gpu);
 
     info.push_str(&disks);
+
 
     info.push_str(&memory);
     info.push_str(&memoryuse);
