@@ -12,7 +12,7 @@ pub fn main()
 
     let mut de = String::new();
     if cfg!(target_os = "linux") {
-        de = "Desktop Enviroment: ".to_owned() + &std::env::var("XDG_CURRENT_DESKTOP").unwrap() + "\n";
+        de = "Desktop Enviroment: ".to_owned() + &std::env::var("XDG_CURRENT_DESKTOP").unwrap_or("None".to_string()) + "\n";
 
     } else if cfg!(windows) {
         de = "Desktop Enviroment: Windows\n".to_owned();
