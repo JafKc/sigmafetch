@@ -21,4 +21,4 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
     - name: Run program
-      run: cmd /C "\target\debug\sigmafetch.exe"
+      run: target\debug\sigmafetch.exe
